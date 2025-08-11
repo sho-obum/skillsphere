@@ -1,0 +1,46 @@
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: skillsphere_mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: "1234"     # old password
+      MYSQL_DATABASE: "skillsphere"   # old database
+      # (we'll use root user from your old config)
+    
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./db-init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p1234"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: skillsphere_api
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      # === your old DB creds mapped for Docker ===
+      DB_HOST: db              # <-- ONLY change vs old config
+      DB_USER: root
+      DB_PASSWORD: "1234"
+      DB_NAME: skillsphere
+      # JWT & misc (keep/change as you like)
+      JWT_ACCESS_SECRET: super_access_secret_change_me
+      JWT_REFRESH_SECRET: super_refresh_secret_change_me
+      JWT_ACCESS_EXPIRES: 15m
+      JWT_REFRESH_EXPIRES: 7d
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+
+volumes:
+  db_data:
