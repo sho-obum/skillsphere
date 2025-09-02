@@ -4,13 +4,13 @@ services:
     image: mysql:8.0
     container_name: skillsphere_mysql
     environment:
-      MYSQL_ROOT_PASSWORD: "1234"     # old password
-      MYSQL_DATABASE: "skillsphere"   # old database
-      # (we'll use root user from your old config)
-    
+      MYSQL_ROOT_PASSWORD: "1234"
+      MYSQL_DATABASE: "skillsphere"
     volumes:
       - db_data:/var/lib/mysql
       - ./db-init:/docker-entrypoint-initdb.d
+    ports:
+      - "3307:3306"
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p1234"]
       interval: 5s
@@ -26,32 +26,36 @@ services:
       db:
         condition: service_healthy
     environment:
-      NODE_ENV: production
+      NODE_ENV: development
       PORT: 3000
-      # === your old DB creds mapped for Docker ===
-      DB_HOST: db              # <-- ONLY change vs old config
+      DB_HOST: db
       DB_USER: root
       DB_PASSWORD: "1234"
       DB_NAME: skillsphere
-      # JWT & misc (keep/change as you like)
       JWT_ACCESS_SECRET: super_access_secret_change_me
       JWT_REFRESH_SECRET: super_refresh_secret_change_me
       JWT_ACCESS_EXPIRES: 15m
       JWT_REFRESH_EXPIRES: 7d
     ports:
       - "3000:3000"
-    restart: unless-stopped
+    volumes:
+      - ./backend:/usr/src/app
+      - /usr/src/app/node_modules
+    command: npm run dev
 
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.dev
     container_name: skillsphere_frontend
     depends_on:
       - api
     ports:
-      - "80:80"
-    restart: unless-stopped
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    command: npm run dev -- --host 0.0.0.0
 
 volumes:
   db_data:
